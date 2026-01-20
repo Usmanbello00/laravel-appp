@@ -1,35 +1,49 @@
-name: Build Laravel Portfolio
+name: Deploy Laravel Portfolio to Azure App Service
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
-  build:
+  build-and-deploy:
 
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      # 1️⃣ Checkout repo
+      - uses: actions/checkout@v4
 
-    - name: Set up PHP
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: '8.2'
+      # 2️⃣ Set up PHP
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
 
-    - name: Copy .env
-      run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+      # 3️⃣ Copy .env
+      - name: Copy .env
+        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
 
-    - name: Install Dependencies
-      run: composer install --no-dev --prefer-dist --optimize-autoloader
+      # 4️⃣ Install dependencies
+      - name: Install Composer Dependencies
+        run: composer install --no-dev --prefer-dist --optimize-autoloader
 
-    - name: Generate App Key
-      run: php artisan key:generate
+      # 5️⃣ Generate app key
+      - name: Generate App Key
+        run: php artisan key:generate --force
 
-    - name: Laravel Optimization
-      run: php artisan optimize
+      # 6️⃣ Laravel optimization
+      - name: Optimize Laravel
+        run: php artisan optimize
 
-    - name: Archive App
-      run: zip -r drop.zip . -x "*.git*"
+      # 7️⃣ Archive the app
+      - name: Archive App
+        run: zip -r drop.zip . -x "*.git*"
+
+      # 8️⃣ Deploy to Azure App Service
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'gitlaravel'               # <-- your App Service name
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: 'drop.zip'
